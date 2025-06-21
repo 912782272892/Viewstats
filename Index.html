@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreeViewStats - Estadísticas de YouTube Gratis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #4285f4;
+            --secondary: #34a853;
+            --accent: #ea4335;
+            --dark: #202124;
+            --light: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+        
+        header {
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo span {
+            color: var(--accent);
+        }
+        
+        .search-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            text-align: center;
+        }
+        
+        #video-url {
+            width: 70%;
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 30px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+        
+        #video-url:focus {
+            border-color: var(--primary);
+        }
+        
+        #analyze-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-left: 10px;
+            transition: all 0.3s;
+        }
+        
+        #analyze-btn:hover {
+            background-color: #3367d6;
+        }
+        
+        .stats-container {
+            display: none;
+            max-width: 1200px;
+            margin: 2rem auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 2rem;
+        }
+        
+        .video-info {
+            display: flex;
+            margin-bottom: 2rem;
+        }
+        
+        .thumbnail {
+            width: 320px;
+            height: 180px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin-right: 2rem;
+        }
+        
+        .video-details {
+            flex: 1;
+        }
+        
+        .video-title {
+            font-size: 1.5rem;
+            margin: 0 0 0.5rem 0;
+            color: var(--dark);
+        }
+        
+        .video-channel {
+            color: #606060;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 0.5rem 0;
+        }
+        
+        .stat-label {
+            color: #606060;
+            font-size: 0.9rem;
+        }
+        
+        .chart-container {
+            margin-top: 2rem;
+            height: 400px;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #606060;
+            font-size: 0.9rem;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 2rem 0;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .video-info {
+                flex-direction: column;
+            }
+            
+            .thumbnail {
+                width: 100%;
+                height: auto;
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+            
+            #video-url {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            #analyze-btn {
+                width: 100%;
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Free<span>ViewStats</span></div>
+        <div class="nav-links">
+            <a href="#about">Acerca de</a>
+        </div>
+    </header>
+    
+    <div class="search-container">
+        <h1>Analiza estadísticas de videos de YouTube</h1>
+        <p>Obtén información detallada sobre cualquier video de YouTube completamente gratis</p>
+        
+        <div style="display: flex; justify-content: center; margin-top: 2rem;">
+            <input type="text" id="video-url" placeholder="Pega la URL o ID del video de YouTube">
+            <button id="analyze-btn">Analizar</button>
+        </div>
+    </div>
+    
+    <div class="loading">
+        <div class="spinner"></div>
+        <p>Obteniendo datos del video...</p>
+    </div>
+    
+    <div class="stats-container" id="stats-container">
+        <div class="video-info">
+            <img id="video-thumbnail" class="thumbnail" src="" alt="Miniatura del video">
+            <div class="video-details">
+                <h2 class="video-title" id="video-title">Título del video</h2>
+                <p class="video-channel" id="video-channel">Nombre del canal</p>
+                <p id="video-description">Descripción del video...</p>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Vistas</div>
+                <div class="stat-value" id="view-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Me gusta</div>
+                <div class="stat-value" id="like-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Comentarios</div>
+                <div class="stat-value" id="comment-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Ratio de engagement</div>
+                <div class="stat-value" id="engagement-rate">0%</div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="viewsChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>FreeViewStats - Una alternativa gratuita a ViewStats.com</p>
+        <p>Este sitio no está afiliado a YouTube ni a Google. Todos los datos se obtienen de la API pública de YouTube.</p>
+    </div>
+    
+    <script>
+        document.getElementById('analyze-btn').addEventListener('click', analyzeVideo);
+        
+        async function analyzeVideo() {
+            const videoUrl = document.getElementById('video-url').value.trim();
+            
+            if (!videoUrl) {
+                alert('Por favor ingresa una URL o ID de video de YouTube');
+                return;
+            }
+            
+            // Mostrar loading
+            document.querySelector('.loading').style.display = 'block';
+            document.getElementById('stats-container').style.display = 'none';
+            
+            try {
+                // Extraer ID del video
+                let videoId = extractVideoId(videoUrl);
+                
+                if (!videoId) {
+                    throw new Error('URL de YouTube no válida');
+                }
+                
+                // Obtener datos del video usando la API pública de YouTube
+                const videoData = await getVideoData(videoId);
+                
+                // Mostrar los datos
+                displayVideoStats(videoData);
+                
+                // Ocultar loading y mostrar resultados
+                document.querySelector('.loading').style.display = 'none';
+                document.getElementById('stats-container').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.querySelector('.loading').style.display = 'none';
+                alert('Error al obtener los datos del video: ' + error.message);
+            }
+        }
+        
+        function extractVideoId(url) {
+            // Extraer ID de diferentes formatos de URL de YouTube
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+            const match = url.match(regExp);
+            
+            return (match && match[2].length === 11) ? match[2] : url;
+        }
+        
+        async function getVideoData(videoId) {
+            // En una implementación real, aquí usarías tu propio backend para evitar exponer la API key
+            // Esta es una implementación de ejemplo que usa un proxy público
+            
+            const proxyUrl = 'https://api.allorigins.win/get?url=';
+            const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8`;
+            
+            const response = await fetch(proxyUrl + encodeURIComponent(apiUrl));
+            const data = await response.json();
+            
+            if (data.contents) {
+                const parsedData = JSON.parse(data.contents);
+                if (parsedData.items && parsedData.items.length > 0) {
+                    return parsedData.items[0];
+                }
+            }
+            
+            throw new Error('No se pudo obtener la información del video');
+        }
+        
+        function displayVideoStats(videoData) {
+            const snippet = videoData.snippet;
+            const stats = videoData.statistics;
+            
+            // Mostrar información básica
+            document.getElementById('video-title').textContent = snippet.title;
+            document.getElementById('video-channel').textContent = snippet.channelTitle;
+            document.getElementById('video-description').textContent = snippet.description.substring(0, 200) + '...';
+            document.getElementById('video-thumbnail').src = snippet.thumbnails.high.url;
+            
+            // Mostrar estadísticas
+            document.getElementById('view-count').textContent = formatNumber(stats.viewCount);
+            document.getElementById('like-count').textContent = formatNumber(stats.likeCount);
+            document.getElementById('comment-count').textContent = formatNumber(stats.commentCount);
+            
+            // Calcular ratio de engagement
+            const engagementRate = (parseInt(stats.likeCount) + parseInt(stats.commentCount)) / parseInt(stats.viewCount) * 100;
+            document.getElementById('engagement-rate').textContent = engagementRate.toFixed(2) + '%';
+            
+            // Crear gráfico (simulado ya que la API no proporciona datos históricos)
+            createChart(stats.viewCount);
+        }
+        
+        function formatNumber(num) {
+            return parseInt(num).toLocaleString();
+        }
+        
+        function createChart(viewCount) {
+            const ctx = document.getElementById('viewsChart').getContext('2d');
+            
+            // Datos simulados para el ejemplo
+            const baseViews = parseInt(viewCount);
+            const labels = [];
+            const data = [];
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                labels.push(date.toLocaleDateString());
+                
+                // Simular crecimiento de vistas
+                const dayViews = Math.round(baseViews * (1 - i/10) * (0.8 + Math.random() * 0.4));
+                data.push(dayViews);
+            }
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Vistas estimadas (últimos 7 días)',
+                        data: data,
+                        borderColor: '#4285f4',
+                        backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+  </html>
